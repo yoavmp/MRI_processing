@@ -26,14 +26,88 @@ produced it. A student can rename anything to anything and later steps still
 find it correctly — only the *role* is checked, not the text of the name. See
 §5 for exactly how this was verified.
 
+## 0. Latest session: live-review fixes (files sidebar, self-contained steps, WebGL2 fallback, comparisons, data-flow badges)
+
+- **Files sidebar no longer lists all 432 DICOM files individually.** The
+  previous version's `renderFilesPanel` filter (`f.kind !== "dir" || ...`)
+  let every per-file DICOM VFS entry through as its own row, even though the
+  two DICOM *directories* already rendered as single collapsed-looking rows.
+  `app.js`'s `renderFilesPanel` now explicitly excludes `f.isDicom` entries
+  and renders `T1w_dicom/`/`BOLD_dicom/` as real `<details>` elements —
+  collapsed by default, count + "Download .zip" in the summary, full real
+  filename list inside on expand. Expansion state is kept in a
+  module-level `folderExpanded` map and reapplied (`details.open = ...`) on
+  every re-render, so it survives the panel being rebuilt on every reveal.
+  Session outputs are listed in a separate "Session files" section below the
+  two folder rows, so new outputs are never buried under DICOM filenames.
+- **Terminal steps are now self-contained.** A new `#term-status` panel
+  (rendered by `renderStepStatus()` in `app.js`) shows, per step: which of
+  the step's required input roles are actually present in the session right
+  now (by their real, possibly student-renamed, filename) vs. missing; for
+  `mcflirt`, which of the two named runs ("Default reference" / "First
+  volume") have been done; for `bet_func` (3 sub-commands), a sub-task
+  checklist with an explicit "Next: ..." line; and the step's expected
+  output filenames. After a successful command, `#term-actions` offers
+  "Inspect output →" (opens the just-revealed file in the Viewer) and, once
+  the step is actually complete (`isStepComplete()`, checked against real
+  VFS roles, not just "a command ran"), "Next step: <title> →". The full
+  runnable command stays behind the progressive `hint` system (now also
+  reachable via a visible Hint button, not just typing `hint`) — the status
+  panel describes *what's needed*, never the literal command.
+- **Fixed the dcm2niix simulated log.** It previously always printed
+  `Convert as <dicom folder name>/<outName>`, i.e. the *input* folder, not
+  the `-o` argument — so a student passing `-o somewhere_else` saw a path
+  that didn't match either their command or the file actually revealed.
+  `runDcm2niix` (`filesystem.js`) now derives the printed path from the
+  actual `-o` flag (defaulting to `.`) and the actual `-f`-derived filename.
+- **Viewer WebGL2 fallback.** `viewer.js` feature-detects WebGL2 once
+  (`detectWebGL2()`) and every `show*` method now falls back to a
+  precomputed static preview (`site/data/previews/*.png`, built by
+  `scripts/06_build_previews.sh` via headless `fsleyes render` from the
+  exact shipped files) plus Download links for the real NIfTI/JSON, instead
+  of a blank canvas and a console error. Covers BET mask overlays (all 6
+  variants), registration alignment (func→struct and struct→MNI), and
+  smoothing before/after — all still gated on terminal progress (a fallback
+  preview is only shown for an asset the student has actually revealed).
+  Plain non-WebGL2 errors (bad URL, etc.) still show a message, now with
+  Download links attached too.
+- **Comparisons.** Motion plots: a new side-by-side comparison
+  (`renderMotionComparison` in `motion-plot.js`, triggered by the Viewer's
+  "Motion plots: Default reference vs. First volume" button) puts both runs'
+  rotation charts next to each other and both translation charts next to
+  each other, each pair sharing one y-axis range computed jointly across
+  both runs, instead of each chart auto-scaling independently. BET
+  threshold comparison: a new N-way toggle (`Viewer.showMultiOverlay`),
+  reachable both from the Viewer quickbar and from a "Compare BET
+  thresholds in Viewer →" button on the `bet_t1w`/`bet_func` workflow
+  cards, gated on at least 2 of that modality's variants being revealed.
+  Every comparison (the original 3 plus these 2 new ones) now shows a
+  "What to look for" prompt (`COMPARISON_PROMPTS` in `terminal-config.js`).
+  Student-facing mentions of the homework's literal "-refvol 1" flag were
+  removed from `workflow-data.js`, `terminal-config.js`, and the
+  `filesystem.js` mcflirt validator's own terminal output — the two runs are
+  now just labeled "Default reference" and "First volume" everywhere a
+  student sees them; the `-refvol`-is-0-indexed rationale for using
+  `-refvol 0` instead stays in this doc and `docs/manifest.md`, not in the
+  student UI.
+- **Workflow diagram data-flow badges.** The 4 handoffs that aren't visually
+  adjacent in the stage grid — converted T1w → anatomical BET, converted
+  fMRI → motion correction, masked 4D fMRI → applywarp, normalized 4D fMRI →
+  smoothing — now show a small "← uses Stage N: ..." / "→ feeds Stage N:
+  ..." badge directly on the relevant diagram cards (`feedsFrom`/`feedsTo`
+  fields on those steps in `workflow-data.js`, rendered by `makeNode()`),
+  not just in the detail panel's prose. The 5-stage structure and the
+  anat-left/func-right two-column layout are unchanged.
+
 ## 1. Behavior that applies to every row below
 
 - **The Viewer is gated on terminal progress.** Its "Open:" dropdown and the
-  three quick-comparison buttons only include/enable files that are actually
-  present in the current session's virtual filesystem — either provided at
-  start (the two DICOM folders, the two MNI templates) or revealed by a
-  command you ran. Verified: a fresh page load shows exactly 2 dropdown
-  options (the MNI templates) and all 3 comparison buttons disabled.
+  three (now five) quick-comparison controls only include/enable files that
+  are actually present in the current session's virtual filesystem —
+  either provided at start (the two DICOM folders, the two MNI templates)
+  or revealed by a command you ran. Verified: a fresh page load shows
+  exactly 2 dropdown options (the MNI templates) and all 5 comparison
+  controls disabled.
 - **`reset` is scoped to the currently active step**, not global — it removes
   only the files tagged `producedByStep === <active step>`, then refreshes
   both the Files panel and the Viewer's available-asset list. Running `reset`

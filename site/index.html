@@ -65,15 +65,18 @@
         <label for="term-step-select" class="term-step-label">Step:</label>
         <select id="term-step-select"></select>
         <div id="term-task" class="term-task"></div>
+        <div id="term-status" class="term-status"></div>
         <div id="term-output" class="term-output" aria-live="polite"></div>
+        <div id="term-actions" class="term-actions"></div>
         <div class="term-inputline">
           <span id="term-prompt" class="term-prompt-static"></span>
           <input id="term-input" type="text" autocomplete="off" spellcheck="false" aria-label="terminal command input" />
+          <button id="term-hint-btn" class="btn-small" type="button" title="Reveal the next hint for this step">Hint</button>
         </div>
       </div>
       <aside class="term-sidebar">
         <h3>Files</h3>
-        <p class="term-sidebar-hint">Both real DICOM folders are listed below from the start — try <code>ls T1w_dicom</code>.</p>
+        <p class="term-sidebar-hint">Both real DICOM folders are listed below from the start, collapsed — expand to see every real filename, or try <code>ls T1w_dicom</code>.</p>
         <div id="term-files" class="term-files"></div>
       </aside>
     </div>
@@ -89,6 +92,8 @@
       <button class="compare-btn" data-pair="bold_nifti,mcf_4d_default">Motion correction before/after</button>
       <button class="compare-btn" data-pair="bold_mni,bold_smooth5mm">Smoothing before/after (5mm)</button>
       <button class="compare-btn" data-pair="mni_brain,struct2standard_fnirt_result">Registration: template vs. warped T1</button>
+      <button class="compare-btn" id="motion-compare-btn">Motion plots: Default reference vs. First volume</button>
+      <button class="compare-btn" id="bet-compare-btn">BET threshold comparison</button>
     </div>
     <div class="viewer-layout">
       <canvas id="viewer-canvas" class="viewer-canvas hidden"></canvas>

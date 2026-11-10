@@ -29,6 +29,7 @@ const WORKFLOW_STEPS = [
     command: "dcm2niix -z y -b y -f T1w -o . T1w_dicom",
     slideNote:
       "The homework's own tool is the MRIcroGL drag-and-drop GUI wrapper around dcm2niix; we use dcm2niix directly from the command line, which is the same underlying conversion (the homework itself mentions this is an equivalent route on lab machines without MRIcroGL).",
+    feedsTo: "→ feeds Stage 3: T1w Brain Extraction (BET)",
     inspect: [
       "Homework Question 1 asks for the dimensions and resolution of every modality — open this file in the Viewer or check its JSON sidecar to answer it.",
       "T1w should be close to isotropic (roughly equal voxel size in all three directions) — typical for a structural scan meant for segmentation/registration.",
@@ -48,6 +49,7 @@ const WORKFLOW_STEPS = [
     inputs: ["BOLD_dicom/ — 240 real DICOM files, one 2D EPI BOLD time series"],
     outputs: ["<name>.nii.gz — the 4D image (70×64×37×240, 3mm)", "<name>.json — scan metadata (TR, TE, …)"],
     command: "dcm2niix -z y -b y -f BOLD -o . BOLD_dicom",
+    feedsTo: "→ feeds Stage 2: Motion Correction (MCFLIRT)",
     inspect: [
       "This is a 4D file — the 4th dimension (240) is the number of volumes/timepoints, not a spatial dimension.",
       "Check the JSON for RepetitionTime (TR) — needed to read the motion-parameter time axis later and to answer Question 1.",
@@ -70,14 +72,15 @@ const WORKFLOW_STEPS = [
     inputs: ["BOLD.nii.gz (Stage 1 output, 240 volumes)"],
     outputs: ["<name>_mcf.nii.gz — motion-corrected 4D image", "<name>_mcf.par — 6 parameters/volume (3 rotations, radians; 3 translations, mm), with -plots"],
     command: "mcflirt -in BOLD.nii.gz -out BOLD_mcf.nii.gz -plots",
+    feedsFrom: "← uses Stage 1: converted fMRI (BOLD.nii.gz)",
     slideNote:
-      "Run both forms — see the Terminal for the second (-refvol 0). We verified -refvol's indexing directly against the installed FSL 6.0.7.13's own --help text: “-refvol <number> (default is no_vols/2) — registers to the (n+1)th volume in series.” It is 0-indexed, so -refvol 0 is what actually selects the first volume. The homework's own prose describes this run as aligning “to the first volume instead of the middle volume” but gives the literal flag -refvol 1 — that flag would actually select the <em>second</em> volume (index 1). We use -refvol 0 here to match the homework's stated intent rather than its literal flag, and say so explicitly rather than silently following either one without comment.",
+      "Run both forms — see the Terminal for the second (the First volume run, -refvol 0, MCFLIRT's reference-volume index starts at 0). The homework asks for a run aligned “to the first volume instead of the middle volume” — that's this one.",
     paramHelp:
-      "Default run — no -refvol — registers to the middle volume (index 120 of 0–239, since the default is no_vols/2). This is the run the rest of the exercise continues from. -refvol 0 registers to the first volume instead — precomputed for Question 2b's comparison, but it's a dead end here: nothing downstream accepts it as input.",
+      "Default reference run — no -refvol — registers to the middle volume (index 120 of 0–239, since the default is no_vols/2). This is the run the rest of the exercise continues from. The First volume run (-refvol 0) is precomputed for Question 2b's comparison, but it's a dead end here: nothing downstream accepts it as input.",
     supportedParams: { refvol: ["default", "0"] },
     inspect: [
-      "Question 2a: plot the motion parameters — look at the 3 rotations and 3 translations separately (different units/scales).",
-      "Question 2b: plot the -refvol 0 run's parameters and compare — both are in the Viewer's motion-plot panel once revealed.",
+      "Question 2a: plot the Default reference run's motion parameters — look at the 3 rotations and 3 translations separately (different units/scales).",
+      "Question 2b: plot the First volume run's parameters and compare — both are in the Viewer's motion-plot panel once revealed, side by side.",
     ],
   },
 
@@ -96,6 +99,7 @@ const WORKFLOW_STEPS = [
     inputs: ["T1w.nii.gz (Stage 1 output)"],
     outputs: ["<name>_brain.nii.gz — brain-only image", "<name>_brain_mask.nii.gz — binary mask, with -m"],
     command: "bet T1w.nii.gz T1w_brain.nii.gz -f 0.5 -m",
+    feedsFrom: "← uses Stage 1: converted T1w (T1w.nii.gz)",
     slideNote:
       "-f 0.5 is not a value we chose — it's FSL's and the homework's actual documented default (“You don't have to insert a fractional intensity threshold - the default threshold will be 0.5”), confirmed against the installed bet's own --help. -f 0.4 is kept here as a labeled comparison value (it was the <em>other</em> course's slide example, not this homework's). -R (robust centre estimation) is <strong>not</strong> in the homework's command — we added it ourselves as cheap insurance against a bad initial centre-of-gravity guess; it doesn't change what -f means.",
     paramHelp: "Try -f 0.2, 0.4, 0.5 (default/designated) or 0.8 — all four are precomputed. Only 0.5's result feeds the rest of the exercise; the others are real, comparable, but comparison-only.",
@@ -122,6 +126,7 @@ const WORKFLOW_STEPS = [
       "BOLD_mcf_brain.nii.gz — the mask applied back to the full 4D series (fslmaths -mas) — this is what Stage 4 uses",
     ],
     command: "fslroi BOLD_mcf.nii.gz BOLD_mcf_vol0.nii.gz 0 1\nbet BOLD_mcf_vol0.nii.gz BOLD_mcf_vol0_brain.nii.gz -f 0.5 -m\nfslmaths BOLD_mcf.nii.gz -mas BOLD_mcf_vol0_brain_mask.nii.gz BOLD_mcf_brain.nii.gz",
+    feedsTo: "→ feeds Stage 4: applywarp (masked 4D fMRI)",
     slideNote:
       "The 3-command shape (extract one volume → BET it → mask the full 4D) is our addition — the homework's own command is just “bet <input> <output> -m -f <threshold>” on the _mcf file directly. We verified on the installed FSL that running it exactly as written would silently truncate to one 3D volume (with a warning), not produce the 4D result the homework describes using in Stage 4 (“your_input_fMRI_data_after_BET”, applied through applywarp as a 4D series). This sequence produces that real 4D result and shows the intermediate explicitly instead of hiding it behind a silent truncation.",
     paramHelp: "-f 0.5 (homework default) is designated; -f 0.3 is precomputed as a labeled comparison (not applied to the 4D series).",
@@ -198,6 +203,8 @@ const WORKFLOW_STEPS = [
     ],
     outputs: ["BOLD_mni.nii.gz — normalized 4D BOLD, 91×109×91 @ 2mm, all 240 volumes"],
     command: "applywarp -i BOLD_mcf_brain.nii.gz -r MNI152_T1_2mm_brain.nii.gz -o BOLD_mni.nii.gz --premat=functional2struct.mat --warp=warp_struct2standard.nii.gz",
+    feedsFrom: "← uses Stage 3: masked 4D fMRI (BOLD_mcf_brain.nii.gz)",
+    feedsTo: "→ feeds Stage 5: Smoothing (normalized 4D fMRI)",
     inspect: [
       "Question 4: compare two participants' final images in the Viewer — here, compare before/after this step on the one participant this exercise uses.",
       "This is where the anatomical and functional branches are fully joined into one space, and the full 4D series (not a single volume) carries through.",
@@ -219,6 +226,7 @@ const WORKFLOW_STEPS = [
     inputs: ["BOLD_mni.nii.gz (Stage 4 output)"],
     outputs: ["<name>.nii.gz — smoothed 4D BOLD"],
     command: "fslmaths BOLD_mni.nii.gz -kernel gauss 2.1233 -fmean BOLD_mni_smooth5mm.nii.gz",
+    feedsFrom: "← uses Stage 4: normalized 4D fMRI (BOLD_mni.nii.gz)",
     slideNote:
       "sigma = FWHM / 2.3548; the homework gives 2.1233 for 5mm directly. Question 5 then asks what sigma you'd use for 3mm and 7mm — that's a calculation to do by hand (3mm → 1.2739, 7mm → 2.9726), not something this exercise precomputes, since the homework itself frames it as arithmetic practice rather than another run. -odt short is our addition, not the homework's — see the Notes panel for why.",
     paramHelp: "Only sigma 2.1233 (5mm FWHM) is precomputed, matching the homework's one required run.",

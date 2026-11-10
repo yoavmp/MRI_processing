@@ -7,12 +7,16 @@ teaching site built around "Exercise 1 - Preprocessing.pdf": a clickable
 convert live in the simulator), and an in-browser NIfTI viewer gated on what
 you've actually produced.
 
-See `docs/manifest.md` §10 for the current writeup — dataset/license, the
+**Live site:** https://yoavmp.github.io/MRI_processing/
+
+See `docs/manifest.md` §10 onward for the current writeup — dataset/license, the
 FSL-behavior verifications (`-refvol` indexing, 4D truncation in `bet`/`flirt`),
 pipeline run log, bundle size, and test results. (§1–9 document a prior
 iteration built on a different dataset; superseded, kept for history.)
 See `docs/simulation-files.md` for the full per-file inventory of what the
-simulator reveals, consumes, and gates.
+simulator reveals, consumes, and gates, and §0 there for the latest UI/UX
+fixes (files sidebar, self-contained terminal steps, WebGL2 fallback,
+comparisons, workflow data-flow badges).
 
 ## Layout
 
@@ -38,10 +42,11 @@ DICOM archives — is tracked, since that's the deployable artifact.
 bash scripts/04_fetch_sub01_dicom.sh     # download the matched T1w+BOLD DICOM pair (CC0) + build the downloadable zips
 bash scripts/05_run_pipeline_sub01.sh    # full pipeline: dcm2niix x2 -> deface -> BET/FLIRT/FNIRT -> MCFLIRT x2 -> BET+mask -> applywarp -> fslmaths
 bash scripts/03_build_public_bundle.sh   # copy the validated, de-identified outputs into site/data/ (wipes and rebuilds it)
+bash scripts/06_build_previews.sh        # build the Viewer's no-WebGL2 static preview PNGs from the site/data/ bundle
 ```
 
-Requires FSL (`$FSLDIR` set, incl. `fsl_deface` and `fnirtfileutils`) and
-`dcm2niix` on `PATH`. FNIRT takes ~15-20 minutes.
+Requires FSL (`$FSLDIR` set, incl. `fsl_deface`, `fnirtfileutils`, and
+`fsleyes`) and `dcm2niix` on `PATH`. FNIRT takes ~15-20 minutes.
 
 ## Running the website locally
 
@@ -56,7 +61,6 @@ Pages project subpath). No build step.
 
 ## What's left
 
-- Deployment (GitHub Pages settings / branch / subpath) — deliberately not done yet.
 - The FSL-GUI simulator (as opposed to the command-line terminal) — deliberately not done yet.
 - This exercise uses 1 of the homework's 3 participants (bundle-size tradeoff).
 - 3mm/7mm smoothing (Question 5) is a calculation exercise in the UI, not a third precomputed pipeline branch.

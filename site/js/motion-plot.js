@@ -2,30 +2,81 @@
 // 3 translations (mm), plotted on separate axes since they're on very
 // different scales (slide 14: "don't look at all 6 at once").
 
-async function renderMotionPlot(container, parUrl, trSeconds) {
-  container.innerHTML = "Loading motion parameters…";
-  let text;
-  try {
-    const res = await fetch(parUrl);
-    text = await res.text();
-  } catch (e) {
-    container.textContent = "Could not load motion parameters: " + e.message;
-    return;
-  }
+async function fetchPar(parUrl) {
+  const res = await fetch(parUrl);
+  const text = await res.text();
   const rows = text
     .trim()
     .split("\n")
     .map((l) => l.trim().split(/\s+/).map(Number));
-  const n = rows.length;
-  const rot = [0, 1, 2].map((i) => rows.map((r) => r[i])); // radians
-  const trans = [3, 4, 5].map((i) => rows.map((r) => r[i])); // mm
-
-  container.innerHTML = "";
-  container.appendChild(makeChart("Rotations (radians)", ["pitch (x)", "roll (y)", "yaw (z)"], rot, n, trSeconds, "rad"));
-  container.appendChild(makeChart("Translations (mm)", ["x", "y", "z"], trans, n, trSeconds, "mm"));
+  return {
+    n: rows.length,
+    rot: [0, 1, 2].map((i) => rows.map((r) => r[i])), // radians
+    trans: [3, 4, 5].map((i) => rows.map((r) => r[i])), // mm
+  };
 }
 
-function makeChart(title, seriesNames, series, n, trSeconds, unit) {
+async function renderMotionPlot(container, parUrl, trSeconds) {
+  container.innerHTML = "Loading motion parameters…";
+  let parsed;
+  try {
+    parsed = await fetchPar(parUrl);
+  } catch (e) {
+    container.textContent = "Could not load motion parameters: " + e.message;
+    return;
+  }
+  container.innerHTML = "";
+  container.appendChild(makeChart("Rotations (radians)", ["pitch (x)", "roll (y)", "yaw (z)"], parsed.rot, parsed.n, trSeconds, "rad"));
+  container.appendChild(makeChart("Translations (mm)", ["x", "y", "z"], parsed.trans, parsed.n, trSeconds, "mm"));
+}
+
+// Side-by-side comparison of two mcflirt runs (e.g. Default reference vs.
+// First volume), with each measurement type (rotations / translations)
+// sharing one y-axis range across both runs so the two plots are visually
+// comparable, not independently auto-scaled.
+async function renderMotionComparison(container, runs, trSeconds, whatToLookFor) {
+  container.innerHTML = "Loading motion parameters…";
+  let parsedRuns;
+  try {
+    parsedRuns = await Promise.all(runs.map((r) => fetchPar(r.url)));
+  } catch (e) {
+    container.textContent = "Could not load motion parameters: " + e.message;
+    return;
+  }
+  container.innerHTML = "";
+
+  if (whatToLookFor) {
+    const p = document.createElement("p");
+    p.className = "viewer-whatlook";
+    p.textContent = "What to look for: " + whatToLookFor;
+    container.appendChild(p);
+  }
+
+  function jointRange(key) {
+    let min = Infinity, max = -Infinity;
+    for (const parsed of parsedRuns) for (const s of parsed[key]) for (const v of s) { if (v < min) min = v; if (v > max) max = v; }
+    const pad = (max - min) * 0.1 || 0.1;
+    return [min - pad, max + pad];
+  }
+  const rotRange = jointRange("rot");
+  const transRange = jointRange("trans");
+
+  for (const [measureTitle, key, unit, range] of [
+    ["Rotations (radians)", "rot", "rad", rotRange],
+    ["Translations (mm)", "trans", "mm", transRange],
+  ]) {
+    const row = document.createElement("div");
+    row.className = "motion-compare-row";
+    runs.forEach((r, i) => {
+      const parsed = parsedRuns[i];
+      const seriesNames = key === "rot" ? ["pitch (x)", "roll (y)", "yaw (z)"] : ["x", "y", "z"];
+      row.appendChild(makeChart(`${measureTitle} — ${r.label}`, seriesNames, parsed[key], parsed.n, trSeconds, unit, range));
+    });
+    container.appendChild(row);
+  }
+}
+
+function makeChart(title, seriesNames, series, n, trSeconds, unit, forcedRange) {
   const W = 640,
     H = 180,
     padL = 48,
@@ -35,13 +86,19 @@ function makeChart(title, seriesNames, series, n, trSeconds, unit) {
   const plotW = W - padL - padR;
   const plotH = H - padT - padB;
 
-  let min = Infinity,
+  let min, max;
+  if (forcedRange) {
+    [min, max] = forcedRange;
+  } else {
+    min = Infinity;
     max = -Infinity;
-  for (const s of series) for (const v of s) { if (v < min) min = v; if (v > max) max = v; }
-  if (min === max) { min -= 1; max += 1; }
-  const pad = (max - min) * 0.1 || 0.1;
-  min -= pad;
-  max += pad;
+    for (const s of series) for (const v of s) { if (v < min) min = v; if (v > max) max = v; }
+    if (min === max) { min -= 1; max += 1; }
+    const autoPad = (max - min) * 0.1 || 0.1;
+    min -= autoPad;
+    max += autoPad;
+  }
+  const labelPad = (max - min) * 0.08 || 0.08;
 
   const x = (i) => padL + (plotW * i) / Math.max(1, n - 1);
   const y = (v) => padT + plotH - ((v - min) / (max - min)) * plotH;
@@ -75,7 +132,7 @@ function makeChart(title, seriesNames, series, n, trSeconds, unit) {
   }
 
   // y labels (min, 0 or mid, max)
-  for (const v of [min + pad, (min + max) / 2, max - pad]) {
+  for (const v of [min + labelPad, (min + max) / 2, max - labelPad]) {
     const t = document.createElementNS(svgNS, "text");
     t.setAttribute("x", padL - 6);
     t.setAttribute("y", y(v) + 3);

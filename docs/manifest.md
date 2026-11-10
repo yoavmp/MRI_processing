@@ -350,3 +350,23 @@ for a repo this size).
 - **Deployed to GitHub Pages this session** — see the repository's own commit
   history and GitHub Pages settings for the live URL and deployed commit SHA
   (not duplicated here since both change on every future deploy).
+
+## 12. Latest session: live-review fixes
+
+Deployed, then reviewed live and fixed in this session: the Files sidebar no
+longer lists all 432 individual DICOM filenames (it only ever should have
+shown the two folders collapsed); terminal steps now show real session state
+(inputs present, missing prerequisites, sub-task progress, expected outputs)
+instead of only a task description, with "Inspect output"/"Next step"
+actions after a success; the dcm2niix simulated log's printed path now
+matches the actual `-o`/`-f` arguments and the file really revealed; the
+Viewer falls back to precomputed static previews (new `site/data/previews/`,
+built by `scripts/06_build_previews.sh`) plus Download links when WebGL2
+isn't available, instead of a blank canvas; motion-correction and BET-
+threshold comparisons got dedicated side-by-side/multi-way views with
+"what to look for" prompts, and "-refvol 1" was removed from every
+student-facing surface in favor of plain "Default reference"/"First volume"
+labels; and the workflow diagram now shows explicit data-flow badges for
+the 4 cross-stage handoffs. Full technical detail (exact files touched,
+verification performed) is in `docs/simulation-files.md` §0, not duplicated
+here.

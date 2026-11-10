@@ -268,7 +268,7 @@ const VALIDATORS = {
     if (!usesDefault && !usesRefvol0) {
       return {
         ok: false,
-        message: `-refvol ${flags.refvol} wasn't precomputed. This exercise supports the default (no -refvol, registers to the middle volume) and -refvol 0 (the first acquired volume, Question 2b's comparison).`,
+        message: `-refvol ${flags.refvol} wasn't precomputed. This exercise supports the default reference (no -refvol, the middle volume) and -refvol 0, the first acquired volume (Question 2b's comparison).`,
       };
     }
     if (!outTok) return { ok: false, message: "mcflirt needs -out <name> for the motion-corrected output." };
@@ -276,10 +276,8 @@ const VALIDATORS = {
     const variant = usesRefvol0 ? "refvol0" : "default";
     const role = usesRefvol0 ? step.comparisonOutputRole : step.outputRole;
     const parId = usesRefvol0 ? "mcf_par_refvol0" : "mcf_par_default";
-    const ndesc =
-      variant === "default"
-        ? "the middle volume (index 120 of 0–239 — FSL's default is no_vols/2)"
-        : "the first volume (index 0 — -refvol is 0-indexed, so -refvol 0, not -refvol 1, is what the homework's own description of 'align to the first volume' means)";
+    const runLabel = variant === "default" ? "Default reference" : "First volume";
+    const ndesc = variant === "default" ? "the middle volume" : "the first acquired volume";
     const reveal = [{ id: usesRefvol0 ? "mcf_4d_refvol0" : "mcf_4d_default", name: outName, role, roleLabel: "motion-corrected BOLD" }];
     const notes = [];
     if (flags.plots) {
@@ -288,9 +286,9 @@ const VALIDATORS = {
       notes.push("tip: add -plots to save the .par motion-parameter file.");
     }
     if (variant === "refvol0") {
-      notes.push("This run aligns to " + ndesc + " — it's kept for comparison (Question 2b). The rest of the exercise continues from the default (middle-volume) run.");
+      notes.push(`This is the "${runLabel}" run — kept for comparison (Question 2b). The rest of the exercise continues from the "Default reference" run.`);
     } else {
-      notes.push("This run aligns to " + ndesc + " — this is the designated run the rest of the exercise continues from.");
+      notes.push(`This is the "${runLabel}" run — the rest of the exercise continues from this one.`);
     }
     return {
       ok: true,
@@ -436,16 +434,18 @@ function runDcm2niix(tokens, vfs, step, cfg) {
   if (flags.z === undefined) tips.push("tip: -z y gzip-compresses the output (.nii.gz instead of .nii)");
   if (flags.b === undefined) tips.push("tip: -b y also writes the .json metadata sidecar — without it you'd only get the image");
   const outName = flags.f && flags.f !== true ? flags.f : cfg.defaultName;
+  const outDir = flags.o && flags.o !== true ? flags.o.replace(/\/+$/, "") || "." : ".";
+  const niiFileName = ensureExt(outName, ".nii.gz");
   const s = cfg.series;
   return {
     ok: true,
     reveal: [
-      { id: cfg.niiAssetId, name: ensureExt(outName, ".nii.gz"), role: cfg.outRole, roleLabel: cfg.outRoleLabel },
+      { id: cfg.niiAssetId, name: niiFileName, role: cfg.outRole, roleLabel: cfg.outRoleLabel },
       { id: cfg.jsonAssetId, name: ensureExt(outName, ".json").replace(/\.nii\.gz\.json$/, ".json"), role: cfg.outRole + "-json", roleLabel: cfg.outRoleLabel + " metadata" },
     ],
     message:
-      `Found ${s.fileCount} DICOM file(s)\n` +
-      `Convert as ${step.dicomFolderName}/${outName} (${s.dims})\n` +
+      `Found ${s.fileCount} DICOM file(s) in ${step.dicomFolderName}/\n` +
+      `Convert as ${outDir}/${niiFileName} (${s.dims})\n` +
       `Conversion required ${s.convertSeconds}s.` +
       (tips.length ? "\n" + tips.join("\n") : ""),
   };

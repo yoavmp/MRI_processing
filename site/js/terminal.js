@@ -23,6 +23,7 @@ class Terminal {
     this.histIdx = -1;
     this.hintIdx = {}; // per-step hint progress
     this.onReveal = null; // callback(assetId) when a new file is revealed, for the viewer
+    this.onCommandSuccess = null; // callback({stepId, revealedIds}) after a successful pipeline command
 
     this.inputEl.addEventListener("keydown", (e) => this.handleKey(e));
     this.print(
@@ -223,6 +224,7 @@ class Terminal {
       return;
     }
     this.print(result.message || "done.", "term-success");
+    const revealedIds = [];
     for (const entry of result.reveal || []) {
       const assetId = typeof entry === "string" ? entry : entry.id;
       const asset = this.assetMap[assetId];
@@ -237,8 +239,12 @@ class Terminal {
         roleLabel: typeof entry === "object" ? entry.roleLabel : undefined,
         comparisonNote: typeof entry === "object" ? entry.comparisonNote : undefined,
       });
+      revealedIds.push(assetId);
       this.printHTML(`✓ revealed: <span class="term-file">${fileName}</span> ${asset.dims ? `<span class="term-dim">(${asset.dims})</span>` : ""}`, "term-reveal");
       if (this.onReveal) this.onReveal(assetId, asset);
+    }
+    if (revealedIds.length && this.onCommandSuccess) {
+      this.onCommandSuccess({ stepId: this.activeStepId, revealedIds });
     }
   }
 }

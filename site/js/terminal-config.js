@@ -19,43 +19,79 @@ const BOLD_SERIES = { fileCount: 240, dims: "70x64x37x240", convertSeconds: "6.2
 
 // ---- asset registry ---------------------------------------------------
 const ASSET_MAP = {
-  t1w_nifti: { url: `${DATA}/anat/T1w.nii.gz`, label: "T1w.nii.gz", dims: "256×256×192, 1mm isotropic", kind: "nifti" },
+  t1w_nifti: { url: `${DATA}/anat/T1w.nii.gz`, label: "T1w.nii.gz", dims: "256×256×192, 1mm isotropic", kind: "nifti", siblingJson: "t1w_json" },
   t1w_json: { url: `${DATA}/anat/T1w.json`, label: "T1w.json", kind: "json" },
-  bold_nifti: { url: `${DATA}/func/BOLD.nii.gz`, label: "BOLD.nii.gz", dims: "70×64×37×240, 3mm, TR=2.0s", kind: "nifti4d" },
+  bold_nifti: { url: `${DATA}/func/BOLD.nii.gz`, label: "BOLD.nii.gz", dims: "70×64×37×240, 3mm, TR=2.0s", kind: "nifti4d", siblingJson: "bold_json" },
   bold_json: { url: `${DATA}/func/BOLD.json`, label: "BOLD.json", kind: "json" },
 
   mni_head: { url: `${DATA}/standard/MNI152_T1_2mm.nii.gz`, label: "MNI152_T1_2mm.nii.gz", dims: "91×109×91 @ 2mm", kind: "nifti" },
   mni_brain: { url: `${DATA}/standard/MNI152_T1_2mm_brain.nii.gz`, label: "MNI152_T1_2mm_brain.nii.gz", dims: "91×109×91 @ 2mm", kind: "nifti" },
 
-  "bet_brain_f0.2": { url: `${DATA}/anat/T1w_brain_f0.2.nii.gz`, label: "T1w_brain.nii.gz (f=0.2)", dims: "256×256×192", kind: "nifti" },
-  "bet_mask_f0.2": { url: `${DATA}/anat/T1w_brain_f0.2_mask.nii.gz`, label: "T1w_brain_mask.nii.gz (f=0.2)", dims: "256×256×192", kind: "mask", overlayBase: "t1w_nifti" },
-  "bet_brain_f0.4": { url: `${DATA}/anat/T1w_brain_f0.4.nii.gz`, label: "T1w_brain.nii.gz (f=0.4)", dims: "256×256×192", kind: "nifti" },
-  "bet_mask_f0.4": { url: `${DATA}/anat/T1w_brain_f0.4_mask.nii.gz`, label: "T1w_brain_mask.nii.gz (f=0.4)", dims: "256×256×192", kind: "mask", overlayBase: "t1w_nifti" },
-  "bet_brain_f0.5": { url: `${DATA}/anat/T1w_brain_f0.5.nii.gz`, label: "T1w_brain.nii.gz (f=0.5, designated)", dims: "256×256×192", kind: "nifti" },
-  "bet_mask_f0.5": { url: `${DATA}/anat/T1w_brain_f0.5_mask.nii.gz`, label: "T1w_brain_mask.nii.gz (f=0.5, designated)", dims: "256×256×192", kind: "mask", overlayBase: "t1w_nifti" },
-  "bet_brain_f0.8": { url: `${DATA}/anat/T1w_brain_f0.8.nii.gz`, label: "T1w_brain.nii.gz (f=0.8)", dims: "256×256×192", kind: "nifti" },
-  "bet_mask_f0.8": { url: `${DATA}/anat/T1w_brain_f0.8_mask.nii.gz`, label: "T1w_brain_mask.nii.gz (f=0.8)", dims: "256×256×192", kind: "mask", overlayBase: "t1w_nifti" },
+  "bet_brain_f0.2": { url: `${DATA}/anat/T1w_brain_f0.2.nii.gz`, label: "T1w_brain.nii.gz (f=0.2)", dims: "256×256×192", kind: "nifti", previewUrl: `${DATA}/previews/bet_t1w_f0.2.png` },
+  "bet_mask_f0.2": { url: `${DATA}/anat/T1w_brain_f0.2_mask.nii.gz`, label: "T1w_brain_mask.nii.gz (f=0.2)", dims: "256×256×192", kind: "mask", overlayBase: "t1w_nifti", previewUrl: `${DATA}/previews/bet_t1w_f0.2.png` },
+  "bet_brain_f0.4": { url: `${DATA}/anat/T1w_brain_f0.4.nii.gz`, label: "T1w_brain.nii.gz (f=0.4)", dims: "256×256×192", kind: "nifti", previewUrl: `${DATA}/previews/bet_t1w_f0.4.png` },
+  "bet_mask_f0.4": { url: `${DATA}/anat/T1w_brain_f0.4_mask.nii.gz`, label: "T1w_brain_mask.nii.gz (f=0.4)", dims: "256×256×192", kind: "mask", overlayBase: "t1w_nifti", previewUrl: `${DATA}/previews/bet_t1w_f0.4.png` },
+  "bet_brain_f0.5": { url: `${DATA}/anat/T1w_brain_f0.5.nii.gz`, label: "T1w_brain.nii.gz (f=0.5, designated)", dims: "256×256×192", kind: "nifti", previewUrl: `${DATA}/previews/bet_t1w_f0.5.png` },
+  "bet_mask_f0.5": { url: `${DATA}/anat/T1w_brain_f0.5_mask.nii.gz`, label: "T1w_brain_mask.nii.gz (f=0.5, designated)", dims: "256×256×192", kind: "mask", overlayBase: "t1w_nifti", previewUrl: `${DATA}/previews/bet_t1w_f0.5.png` },
+  "bet_brain_f0.8": { url: `${DATA}/anat/T1w_brain_f0.8.nii.gz`, label: "T1w_brain.nii.gz (f=0.8)", dims: "256×256×192", kind: "nifti", previewUrl: `${DATA}/previews/bet_t1w_f0.8.png` },
+  "bet_mask_f0.8": { url: `${DATA}/anat/T1w_brain_f0.8_mask.nii.gz`, label: "T1w_brain_mask.nii.gz (f=0.8)", dims: "256×256×192", kind: "mask", overlayBase: "t1w_nifti", previewUrl: `${DATA}/previews/bet_t1w_f0.8.png` },
 
-  mcf_4d_default: { url: `${DATA}/func/BOLD_mcf_default.nii.gz`, label: "BOLD_mcf.nii.gz (default, designated)", dims: "70×64×37×240", kind: "nifti4d" },
-  mcf_par_default: { url: `${DATA}/func/BOLD_mcf_default.par`, label: "BOLD_mcf.par (default)", kind: "par" },
-  mcf_4d_refvol0: { url: `${DATA}/func/BOLD_mcf_refvol0.nii.gz`, label: "BOLD_mcf.nii.gz (-refvol 0, comparison)", dims: "70×64×37×240", kind: "nifti4d" },
-  mcf_par_refvol0: { url: `${DATA}/func/BOLD_mcf_refvol0.par`, label: "BOLD_mcf.par (-refvol 0)", kind: "par" },
+  mcf_4d_default: { url: `${DATA}/func/BOLD_mcf_default.nii.gz`, label: "BOLD_mcf.nii.gz (Default reference)", dims: "70×64×37×240", kind: "nifti4d" },
+  mcf_par_default: { url: `${DATA}/func/BOLD_mcf_default.par`, label: "BOLD_mcf.par (Default reference)", kind: "par" },
+  mcf_4d_refvol0: { url: `${DATA}/func/BOLD_mcf_refvol0.nii.gz`, label: "BOLD_mcf.nii.gz (First volume)", dims: "70×64×37×240", kind: "nifti4d" },
+  mcf_par_refvol0: { url: `${DATA}/func/BOLD_mcf_refvol0.par`, label: "BOLD_mcf.par (First volume)", kind: "par" },
 
   bold_mcf_vol0: { url: `${DATA}/func/BOLD_mcf_vol0.nii.gz`, label: "BOLD_mcf_vol0.nii.gz (representative volume)", dims: "70×64×37", kind: "nifti" },
-  "funcbet_brain_f0.3": { url: `${DATA}/func/BOLD_mcf_vol0_brain_f0.3.nii.gz`, label: "BOLD_mcf_vol0_brain.nii.gz (f=0.3)", dims: "70×64×37", kind: "nifti" },
-  "funcbet_mask_f0.3": { url: `${DATA}/func/BOLD_mcf_vol0_brain_f0.3_mask.nii.gz`, label: "BOLD_mcf_vol0_brain_mask.nii.gz (f=0.3)", dims: "70×64×37", kind: "mask", overlayBase: "bold_mcf_vol0" },
-  "funcbet_brain_f0.5": { url: `${DATA}/func/BOLD_mcf_vol0_brain_f0.5.nii.gz`, label: "BOLD_mcf_vol0_brain.nii.gz (f=0.5, designated)", dims: "70×64×37", kind: "nifti" },
-  "funcbet_mask_f0.5": { url: `${DATA}/func/BOLD_mcf_vol0_brain_f0.5_mask.nii.gz`, label: "BOLD_mcf_vol0_brain_mask.nii.gz (f=0.5, designated)", dims: "70×64×37", kind: "mask", overlayBase: "bold_mcf_vol0" },
+  "funcbet_brain_f0.3": { url: `${DATA}/func/BOLD_mcf_vol0_brain_f0.3.nii.gz`, label: "BOLD_mcf_vol0_brain.nii.gz (f=0.3)", dims: "70×64×37", kind: "nifti", previewUrl: `${DATA}/previews/bet_func_f0.3.png` },
+  "funcbet_mask_f0.3": { url: `${DATA}/func/BOLD_mcf_vol0_brain_f0.3_mask.nii.gz`, label: "BOLD_mcf_vol0_brain_mask.nii.gz (f=0.3)", dims: "70×64×37", kind: "mask", overlayBase: "bold_mcf_vol0", previewUrl: `${DATA}/previews/bet_func_f0.3.png` },
+  "funcbet_brain_f0.5": { url: `${DATA}/func/BOLD_mcf_vol0_brain_f0.5.nii.gz`, label: "BOLD_mcf_vol0_brain.nii.gz (f=0.5, designated)", dims: "70×64×37", kind: "nifti", previewUrl: `${DATA}/previews/bet_func_f0.5.png` },
+  "funcbet_mask_f0.5": { url: `${DATA}/func/BOLD_mcf_vol0_brain_f0.5_mask.nii.gz`, label: "BOLD_mcf_vol0_brain_mask.nii.gz (f=0.5, designated)", dims: "70×64×37", kind: "mask", overlayBase: "bold_mcf_vol0", previewUrl: `${DATA}/previews/bet_func_f0.5.png` },
   bold_brain_4d: { url: `${DATA}/func/BOLD_mcf_brain4d_f0.5.nii.gz`, label: "BOLD_mcf_brain.nii.gz (full 4D, masked)", dims: "70×64×37×240", kind: "nifti4d" },
 
-  func2struct_mat: { url: `${DATA}/func/func2struct.mat`, label: "functional2struct.mat", kind: "mat" },
+  func2struct_mat: { url: `${DATA}/func/func2struct.mat`, label: "functional2struct.mat", kind: "mat", previewUrl: `${DATA}/previews/align_func2struct.png`, previewCaption: "Functional brain (hot colormap) resampled into T1w space using this matrix, overlaid on the post-BET T1w." },
   struct2standard_mat: { url: `${DATA}/anat/struct2standard.mat`, label: "struct2standard.mat", kind: "mat" },
 
   struct2standard_warp: { url: `${DATA}/anat/warp_struct2standard.nii.gz`, label: "warp_struct2standard.nii.gz", dims: "warp field (spline coefficients)", kind: "warp" },
-  struct2standard_fnirt_result: { url: `${DATA}/anat/struct2standard_fnirt.nii.gz`, label: "T1 resampled into MNI space (--iout)", dims: "91×109×91 @ 2mm", kind: "nifti", overlayBase: "mni_brain" },
+  struct2standard_fnirt_result: { url: `${DATA}/anat/struct2standard_fnirt.nii.gz`, label: "T1 resampled into MNI space (--iout)", dims: "91×109×91 @ 2mm", kind: "nifti", overlayBase: "mni_brain", previewUrl: `${DATA}/previews/align_struct2standard.png` },
 
-  bold_mni: { url: `${DATA}/func/BOLD_mni.nii.gz`, label: "BOLD_mni.nii.gz", dims: "91×109×91×240 @ 2mm (MNI grid)", kind: "nifti4d" },
-  bold_smooth5mm: { url: `${DATA}/func/BOLD_mni_smooth5mm.nii.gz`, label: "BOLD_mni_smooth5mm.nii.gz", dims: "91×109×91×240 @ 2mm", kind: "nifti4d" },
+  bold_mni: { url: `${DATA}/func/BOLD_mni.nii.gz`, label: "BOLD_mni.nii.gz", dims: "91×109×91×240 @ 2mm (MNI grid)", kind: "nifti4d", previewUrl: `${DATA}/previews/smooth_before.png` },
+  bold_smooth5mm: { url: `${DATA}/func/BOLD_mni_smooth5mm.nii.gz`, label: "BOLD_mni_smooth5mm.nii.gz", dims: "91×109×91×240 @ 2mm", kind: "nifti4d", previewUrl: `${DATA}/previews/smooth_after.png` },
+};
+
+// ---- static previews for the Viewer's no-WebGL2 fallback -----------------
+// Each entry maps an asset id to a plain-language "what to look for" prompt
+// shown next to its static preview image. Images themselves are precomputed
+// (fsleyes render, headless) from these exact shipped files — see
+// scripts/06_build_previews.sh.
+const PREVIEW_PROMPTS = {
+  "bet_brain_f0.2": "As -f increases the brain outline should shrink inward. At 0.2 expect extra non-brain tissue (skull/dura) left in.",
+  "bet_mask_f0.2": "As -f increases the brain outline should shrink inward. At 0.2 expect extra non-brain tissue (skull/dura) left in.",
+  "bet_brain_f0.4": "A middle-ground threshold — compare its outline against 0.2 and 0.8 to see the trend.",
+  "bet_mask_f0.4": "A middle-ground threshold — compare its outline against 0.2 and 0.8 to see the trend.",
+  "bet_brain_f0.5": "The homework's default. The red mask should hug the cortical surface without visible skull or major brain tissue cut away.",
+  "bet_mask_f0.5": "The homework's default. The red mask should hug the cortical surface without visible skull or major brain tissue cut away.",
+  "bet_brain_f0.8": "As -f increases expect the mask to shrink — at 0.8 look for real cortex being cut away, especially at the brain's surface.",
+  "bet_mask_f0.8": "As -f increases expect the mask to shrink — at 0.8 look for real cortex being cut away, especially at the brain's surface.",
+  "funcbet_brain_f0.3": "Lower resolution than the T1w — expect a blockier mask. It should still cover the whole functional brain without major gaps.",
+  "funcbet_mask_f0.3": "Lower resolution than the T1w — expect a blockier mask. It should still cover the whole functional brain without major gaps.",
+  "funcbet_brain_f0.5": "The designated run. Check the mask covers the whole functional brain without major gaps.",
+  "funcbet_mask_f0.5": "The designated run. Check the mask covers the whole functional brain without major gaps.",
+  func2struct_mat: "The hot-colormap functional brain should sit inside the grayscale T1w brain outline, tracking the same overall shape and position.",
+  struct2standard_fnirt_result: "The warped T1's cortical folding and ventricle outlines should track the MNI template closely, especially near the brain's surface.",
+  bold_mni: "This is the un-smoothed input — fine, grainy detail should be clearly visible slice to slice.",
+  bold_smooth5mm: "Compare against the un-smoothed version: fine detail should visibly soften while the overall brain shape is unchanged.",
+};
+
+// "What to look for" prompts for the quick-comparison buttons and the
+// multi-way BET/motion comparisons, keyed by the same "a,b" pair string
+// used in each button's data-pair attribute (or a fixed key for the
+// non-pair comparisons).
+const COMPARISON_PROMPTS = {
+  "bold_nifti,mcf_4d_default": "Step through the time-volume slider on both: the raw series should show small frame-to-frame jitter in the brain's position; the motion-corrected series should look steadier, volume to volume.",
+  "bold_mni,bold_smooth5mm": "Fine-grained, grainy texture should visibly soften after smoothing while the overall brain shape and position stay the same.",
+  "mni_brain,struct2standard_fnirt_result": "Check that the cortical outline and ventricles of the warped T1 (second volume) track the MNI template (first volume) closely, especially near the brain's surface.",
+  motionCompare: "Both runs should show the same overall motion trend, but the first-volume run's curves are offset relative to the default (middle-volume) run's — because they're each measuring displacement from a different reference point.",
+  betCompare: "As -f increases, the brain outline should shrink inward. Too high cuts into real cortex; too low leaves skull/dura in. Compare all revealed thresholds to judge which is \"best\" for this T1w (Question 3).",
 };
 
 // ---- per-step terminal runtime -------------------------------------------
@@ -64,6 +100,7 @@ const STEP_RUNTIME = {
     commands: [{ binary: "dcm2niix", validator: "dcm2niix_t1w" }],
     task: "Convert the T1w DICOM series (192 files) into a NIfTI image + JSON sidecar.",
     dicomFolderName: "T1w_dicom",
+    outputRole: "t1w-nifti",
     series: T1W_SERIES,
     hints: [
       "dcm2niix takes the DICOM folder as its last (positional) argument. Run 'ls' to see it.",
@@ -75,6 +112,7 @@ const STEP_RUNTIME = {
     commands: [{ binary: "dcm2niix", validator: "dcm2niix_bold" }],
     task: "Convert the BOLD DICOM series (240 files) into a 4D NIfTI image + JSON sidecar.",
     dicomFolderName: "BOLD_dicom",
+    outputRole: "bold-nifti",
     series: BOLD_SERIES,
     hints: [
       "Same shape as the T1w conversion, different folder.",
@@ -84,13 +122,13 @@ const STEP_RUNTIME = {
   },
   mcflirt: {
     commands: [{ binary: "mcflirt", validator: "mcflirt" }],
-    task: "Motion-correct the 240-volume BOLD series. Run it twice: once with mcflirt's default reference, once with -refvol 0 — the first acquired volume (Question 2).",
+    task: "Motion-correct the 240-volume BOLD series. Run it twice: once with the Default reference, once with the First volume as reference (Question 2).",
     expectedInputRole: "bold-nifti",
     outputRole: "bold-mcf-default",
     comparisonOutputRole: "bold-mcf-refvol0",
     hints: [
       "Syntax: mcflirt -in <file> -out <file> -plots [-refvol <n>]",
-      "First run with no -refvol at all (the default: the middle volume). Then run again with -refvol 0 and a different -out name — -refvol is 0-indexed, so 0 is the first volume (the homework's own -refvol 1 would actually be the second).",
+      "First run with no -refvol at all (the Default reference: the middle volume). Then run again with -refvol 0 and a different -out name, to align to the First volume instead.",
       "Try: mcflirt -in BOLD.nii.gz -out BOLD_mcf.nii.gz -plots\nmcflirt -in BOLD.nii.gz -out BOLD_mcf_refvol0.nii.gz -refvol 0 -plots",
     ],
   },
