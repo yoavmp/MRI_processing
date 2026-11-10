@@ -1,0 +1,14 @@
+# Raw and derived MRI data stay out of the tracked tree for now.
+# Everything under data/ and derivatives/ is binary imaging data
+# (DICOM, NIfTI, motion/registration outputs) and must not be committed
+# until a final, reviewed, sanitized student bundle is assembled.
+/data/
+/derivatives/
+
+# OS / editor cruft
+.DS_Store
+__pycache__/
+*.pyc
+
+# Local dev tooling (browser-testing), not part of the published site
+/.devtools/

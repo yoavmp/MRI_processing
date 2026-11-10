@@ -1,0 +1,178 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>MRI Preprocessing — Interactive Guide</title>
+<link rel="stylesheet" href="css/style.css" />
+</head>
+<body>
+<header class="site-header">
+  <h1>MRI Preprocessing, step by step</h1>
+  <p class="subtitle">
+    From raw DICOM to a smoothed, standard-space functional image — an interactive companion to
+    <em>Analysis and Processing of MRI Data, Exercise 1 — Preprocessing</em>. All data below is real,
+    de-identified, and freely redistributable (CC0), from one matched T1w + fMRI participant.
+    Commands you type are <strong>simulated</strong>, not actually executed.
+  </p>
+  <nav class="tabs">
+    <button class="tab-btn active" data-tab="overview">Overview</button>
+    <button class="tab-btn" data-tab="workflow">Workflow</button>
+    <button class="tab-btn" data-tab="terminal">Terminal</button>
+    <button class="tab-btn" data-tab="viewer">Viewer</button>
+    <button class="tab-btn" data-tab="about">Data &amp; Attribution</button>
+  </nav>
+</header>
+
+<main>
+
+  <section id="panel-overview" class="tab-panel active">
+    <h2>What this is</h2>
+    <p>
+      This page walks through the homework's 5-stage FSL preprocessing pipeline — DICOM→NIfTI, motion
+      correction, brain extraction, registration and normalization, and smoothing — using one real,
+      CC0-licensed participant's data: a 192-slice T1w MPRAGE and a 240-volume resting-state BOLD scan,
+      from the same scan session.
+    </p>
+    <ul class="overview-list">
+      <li><strong>Workflow</strong> — a clickable diagram of all 5 homework stages: why each step exists,
+        what goes in and out, the exact command, and what to check afterward.</li>
+      <li><strong>Terminal</strong> — pick a step and type the real FSL command yourself, on both real DICOM
+        series. Correct commands reveal the actual precomputed output; your own filenames carry through
+        to later steps.</li>
+      <li><strong>Viewer</strong> — inspect anything you've revealed: slice through it, compare before/after,
+        overlay a mask, or plot motion parameters. Nothing appears here until you've actually produced it.</li>
+    </ul>
+    <p>
+      The T1w (anatomical) and fMRI (functional) branches run in parallel from Stage 1, and <strong>join</strong>
+      in Stage 4 when the functional data is registered to this participant's own T1w and then resampled into
+      standard space — that's the diagram's cross-branch rows.
+    </p>
+    <button class="btn-primary" id="overview-start-btn">Start with the Workflow →</button>
+  </section>
+
+  <section id="panel-workflow" class="tab-panel">
+    <h2>Clickable workflow — the homework's 5 stages</h2>
+    <p class="hint-text">Click any step. T1w/anatomical is on the left, fMRI/functional on the right; stages 2 and 5 are functional-only, stage 4 is where the branches join.</p>
+    <div id="workflow-diagram" class="diagram"></div>
+    <div id="step-detail" class="step-detail"></div>
+  </section>
+
+  <section id="panel-terminal" class="tab-panel">
+    <h2>Terminal simulator</h2>
+    <div class="terminal-layout">
+      <div class="terminal-main">
+        <label for="term-step-select" class="term-step-label">Step:</label>
+        <select id="term-step-select"></select>
+        <div id="term-task" class="term-task"></div>
+        <div id="term-output" class="term-output" aria-live="polite"></div>
+        <div class="term-inputline">
+          <span id="term-prompt" class="term-prompt-static"></span>
+          <input id="term-input" type="text" autocomplete="off" spellcheck="false" aria-label="terminal command input" />
+        </div>
+      </div>
+      <aside class="term-sidebar">
+        <h3>Files</h3>
+        <p class="term-sidebar-hint">Both real DICOM folders are listed below from the start — try <code>ls T1w_dicom</code>.</p>
+        <div id="term-files" class="term-files"></div>
+      </aside>
+    </div>
+  </section>
+
+  <section id="panel-viewer" class="tab-panel">
+    <h2>MRI viewer</h2>
+    <p class="hint-text">Only files you've revealed in the Terminal (or that are provided from the start) appear here.</p>
+    <div class="viewer-quickbar">
+      <label for="viewer-asset-select">Open:</label>
+      <select id="viewer-asset-select"></select>
+      <span class="viewer-quick-label">Quick comparisons:</span>
+      <button class="compare-btn" data-pair="bold_nifti,mcf_4d_default">Motion correction before/after</button>
+      <button class="compare-btn" data-pair="bold_mni,bold_smooth5mm">Smoothing before/after (5mm)</button>
+      <button class="compare-btn" data-pair="mni_brain,struct2standard_fnirt_result">Registration: template vs. warped T1</button>
+    </div>
+    <div class="viewer-layout">
+      <canvas id="viewer-canvas" class="viewer-canvas hidden"></canvas>
+      <div id="viewer-controls" class="viewer-controls hidden"></div>
+    </div>
+    <div id="viewer-motion-plot" class="viewer-motion-plot"></div>
+  </section>
+
+  <section id="panel-about" class="tab-panel">
+    <h2>Data, licenses &amp; provenance</h2>
+
+    <h3>Dataset</h3>
+    <p>
+      <strong>sub-01</strong> — a single adult human brain, 3T Siemens Prisma. Published by its creator
+      (<a href="https://github.com/dfsp-spirit" target="_blank" rel="noopener">dfsp-spirit</a>) at
+      <a href="https://github.com/dfsp-spirit/sub-01" target="_blank" rel="noopener">github.com/dfsp-spirit/sub-01</a>,
+      backed by a Zenodo record:
+      <em>MR scans of a human, adult brain at 3T in BIDS format. Includes DICOMS, preprocessed output of
+      FreeSurfer, fmriprep and qsirecon</em>, <a href="https://doi.org/10.5281/zenodo.22697454" target="_blank" rel="noopener">doi:10.5281/zenodo.22697454</a>.
+      License: <strong>CC0 1.0</strong> (public domain dedication — no restrictions, no attribution required;
+      we credit it anyway).
+    </p>
+    <p>
+      This exercise uses two of its DICOM series, from the <strong>same participant, same scan session</strong>
+      (verified directly: both series share one DICOM <code>StudyInstanceUID</code>) —
+      series <code>0002</code>, a 192-slice T1w MPRAGE (1mm isotropic), and series <code>0005</code>, a
+      240-volume resting-state BOLD EPI (3mm). Both are real, unmodified scanner DICOM files, downloadable
+      in full from the Files panel in the Terminal tab.
+    </p>
+    <p>
+      <strong>Headers:</strong> already anonymized by the publisher with <code>dicom-anonymizer</code> before
+      release — <code>PatientName</code>/<code>PatientID</code> literally read <code>ANONYMIZED</code>, birth
+      date and study date are reset, and institution/physician/device-serial fields are all empty. Verified
+      directly against the downloaded files, all 432 of them, not just a sample.
+    </p>
+    <p>
+      <strong>What we changed before publishing:</strong> the T1w image was <strong>defaced</strong> with
+      FSL's <code>fsl_deface</code> (verified: zero overlap between the removed voxels and the BET brain
+      mask — see <code>docs/manifest.md</code>). The raw DICOM pixel data (not defaced) is not published
+      here beyond what the original CC0 release already makes public; our derived NIfTI outputs use the
+      defaced version throughout.
+    </p>
+
+    <h3>Standard-space template</h3>
+    <p>
+      MNI152 (ICBM) template, © 1993–2009 Louis Collins, McConnell Brain Imaging Centre, Montreal
+      Neurological Institute, McGill University. "Permission to use, copy, modify, and distribute this software
+      and its documentation for any purpose and without fee is hereby granted, provided that the above copyright
+      notice appear in all copies." Distributed here as shipped with FSL's <code>data/standard/</code>.
+    </p>
+
+    <h3>Software</h3>
+    <p>
+      Pipeline computed locally with <strong>FSL 6.0.7.13</strong> (University of Oxford; FSL Non-Commercial
+      License — used here to produce the precomputed teaching outputs, not redistributed itself) and
+      <strong>dcm2niix v1.0.20211006</strong> (Chris Rorden). The in-browser viewer uses
+      <a href="https://github.com/niivue/niivue" target="_blank" rel="noopener">Niivue</a> (BSD-2-Clause),
+      vendored locally in <code>vendor/niivue/</code>.
+    </p>
+
+    <h3>Full provenance</h3>
+    <p>See <code>docs/manifest.md</code> and <code>docs/simulation-files.md</code> in the project repository
+      for the complete license/citation table, the DICOM/header audit, the FSL-behavior verifications
+      (<code>-refvol</code> indexing, 4D truncation in <code>bet</code>/<code>flirt</code>), and the full
+      pipeline run log with QC images.</p>
+  </section>
+
+</main>
+
+<footer class="site-footer">
+  <p>Teaching material for <em>Analysis and Processing of MRI Data</em>. Not affiliated with FSL/FMRIB, dcm2niix, or Niivue.</p>
+</footer>
+
+<script src="js/workflow-data.js"></script>
+<script src="js/filesystem.js"></script>
+<script src="js/terminal-config.js"></script>
+<script src="js/terminal.js"></script>
+<script src="js/motion-plot.js"></script>
+<script src="js/viewer.js"></script>
+<script src="js/app.js"></script>
+<script>
+  document.getElementById("overview-start-btn").addEventListener("click", () => {
+    document.querySelector('.tab-btn[data-tab="workflow"]').click();
+  });
+</script>
+</body>
+</html>
