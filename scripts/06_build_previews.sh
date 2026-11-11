@@ -13,9 +13,17 @@ cd "${ROOT}/site/data"
 OUT=previews
 mkdir -p "${OUT}"
 
+echo "== representative functional volume (first volume of the default motion-corrected run) =="
+# Not a shipped site asset — single-volume background purely for rendering
+# the BET-mask preview images below, now that the student's BET command
+# (-F, fMRI mode) takes the 4D series directly and never produces this
+# single-volume intermediate itself.
+TMP="$(mktemp -d)"
+fslroi func/BOLD_mcf_default.nii.gz "${TMP}/BOLD_mcf_vol0.nii.gz" 0 1
+
 echo "== display ranges (robust 2nd-98th percentile) =="
 t1w_dr=$(fslstats anat/T1w.nii.gz -P 2 -P 98)
-func_dr=$(fslstats func/BOLD_mcf_vol0.nii.gz -P 2 -P 98)
+func_dr=$(fslstats "${TMP}/BOLD_mcf_vol0.nii.gz" -P 2 -P 98)
 mni_dr=$(fslstats standard/MNI152_T1_2mm_brain.nii.gz -P 2 -P 98)
 bold_mni_dr=$(fslstats func/BOLD_mni.nii.gz -P 2 -P 98)
 echo "T1w: ${t1w_dr} | func: ${func_dr} | MNI: ${mni_dr} | BOLD_mni: ${bold_mni_dr}"
@@ -27,19 +35,19 @@ for f in 0.2 0.4 0.5 0.8; do
     "anat/T1w_brain_f${f}_mask.nii.gz" -cm red -a 45
 done
 
-echo "== BET functional overlays (2 variants) =="
+echo "== BET functional overlays (2 variants, bet -F masks over the first functional volume) =="
 for f in 0.3 0.5; do
   fsleyes render -hc --scene ortho --size 800 500 --outfile "${OUT}/bet_func_f${f}.png" \
-    func/BOLD_mcf_vol0.nii.gz -dr ${func_dr} \
-    "func/BOLD_mcf_vol0_brain_f${f}_mask.nii.gz" -cm red -a 45
+    "${TMP}/BOLD_mcf_vol0.nii.gz" -dr ${func_dr} \
+    "func/BOLD_mcf_brain_f${f}_mask.nii.gz" -cm red -a 45
 done
 
 echo "== registration alignment: func -> struct =="
-# Resample the post-BET representative functional volume into T1w space
+# Resample the first volume of the real post-BET 4D series into T1w space
 # using the real func2struct.mat, purely to generate this illustrative
 # preview (this intermediate is not itself a shipped pipeline asset).
-TMP="$(mktemp -d)"
-flirt -in func/BOLD_mcf_vol0_brain_f0.5.nii.gz -ref anat/T1w_brain_f0.5.nii.gz \
+fslroi func/BOLD_mcf_brain_f0.5.nii.gz "${TMP}/func_brain_vol0.nii.gz" 0 1
+flirt -in "${TMP}/func_brain_vol0.nii.gz" -ref anat/T1w_brain_f0.5.nii.gz \
   -applyxfm -init func/func2struct.mat -out "${TMP}/func_in_struct.nii.gz"
 func_in_struct_dr=$(fslstats "${TMP}/func_in_struct.nii.gz" -P 2 -P 98)
 fsleyes render -hc --scene ortho --size 800 500 --outfile "${OUT}/align_func2struct.png" \

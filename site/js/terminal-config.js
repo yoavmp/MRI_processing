@@ -38,15 +38,17 @@ const ASSET_MAP = {
 
   mcf_4d_default: { url: `${DATA}/func/BOLD_mcf_default.nii.gz`, label: "BOLD_mcf.nii.gz (Default reference)", dims: "70×64×37×240", kind: "nifti4d" },
   mcf_par_default: { url: `${DATA}/func/BOLD_mcf_default.par`, label: "BOLD_mcf.par (Default reference)", kind: "par" },
-  mcf_4d_refvol0: { url: `${DATA}/func/BOLD_mcf_refvol0.nii.gz`, label: "BOLD_mcf.nii.gz (First volume)", dims: "70×64×37×240", kind: "nifti4d" },
-  mcf_par_refvol0: { url: `${DATA}/func/BOLD_mcf_refvol0.par`, label: "BOLD_mcf.par (First volume)", kind: "par" },
+  mcf_4d_refvol0: { url: `${DATA}/func/BOLD_mcf_refvol0.nii.gz`, label: "BOLD_mcf_firstvol.nii.gz (First volume)", dims: "70×64×37×240", kind: "nifti4d" },
+  mcf_par_refvol0: { url: `${DATA}/func/BOLD_mcf_refvol0.par`, label: "BOLD_mcf_firstvol.par (First volume)", kind: "par" },
 
-  bold_mcf_vol0: { url: `${DATA}/func/BOLD_mcf_vol0.nii.gz`, label: "BOLD_mcf_vol0.nii.gz (representative volume)", dims: "70×64×37", kind: "nifti" },
-  "funcbet_brain_f0.3": { url: `${DATA}/func/BOLD_mcf_vol0_brain_f0.3.nii.gz`, label: "BOLD_mcf_vol0_brain.nii.gz (f=0.3)", dims: "70×64×37", kind: "nifti", previewUrl: `${DATA}/previews/bet_func_f0.3.png` },
-  "funcbet_mask_f0.3": { url: `${DATA}/func/BOLD_mcf_vol0_brain_f0.3_mask.nii.gz`, label: "BOLD_mcf_vol0_brain_mask.nii.gz (f=0.3)", dims: "70×64×37", kind: "mask", overlayBase: "bold_mcf_vol0", previewUrl: `${DATA}/previews/bet_func_f0.3.png` },
-  "funcbet_brain_f0.5": { url: `${DATA}/func/BOLD_mcf_vol0_brain_f0.5.nii.gz`, label: "BOLD_mcf_vol0_brain.nii.gz (f=0.5, designated)", dims: "70×64×37", kind: "nifti", previewUrl: `${DATA}/previews/bet_func_f0.5.png` },
-  "funcbet_mask_f0.5": { url: `${DATA}/func/BOLD_mcf_vol0_brain_f0.5_mask.nii.gz`, label: "BOLD_mcf_vol0_brain_mask.nii.gz (f=0.5, designated)", dims: "70×64×37", kind: "mask", overlayBase: "bold_mcf_vol0", previewUrl: `${DATA}/previews/bet_func_f0.5.png` },
-  bold_brain_4d: { url: `${DATA}/func/BOLD_mcf_brain4d_f0.5.nii.gz`, label: "BOLD_mcf_brain.nii.gz (full 4D, masked)", dims: "70×64×37×240", kind: "nifti4d" },
+  // One BET command (-F, fMRI mode), run directly on the Default-reference
+  // 4D motion-corrected series — a genuine brain-extracted 4D result plus
+  // one 3D mask, confirmed against the installed FSL (bet --help: "-F apply
+  // to 4D FMRI data (uses -f 0.3 and dilates brain mask slightly)").
+  "funcbet_brain_f0.3": { url: `${DATA}/func/BOLD_mcf_brain_f0.3.nii.gz`, label: "BOLD_mcf_brain.nii.gz (f=0.3, -F's own default)", dims: "70×64×37×240", kind: "nifti4d", previewUrl: `${DATA}/previews/bet_func_f0.3.png` },
+  "funcbet_mask_f0.3": { url: `${DATA}/func/BOLD_mcf_brain_f0.3_mask.nii.gz`, label: "BOLD_mcf_brain_mask.nii.gz (f=0.3)", dims: "70×64×37", kind: "mask", overlayBase: "mcf_4d_default", previewUrl: `${DATA}/previews/bet_func_f0.3.png` },
+  "funcbet_brain_f0.5": { url: `${DATA}/func/BOLD_mcf_brain_f0.5.nii.gz`, label: "BOLD_mcf_brain.nii.gz (f=0.5, designated)", dims: "70×64×37×240", kind: "nifti4d", previewUrl: `${DATA}/previews/bet_func_f0.5.png` },
+  "funcbet_mask_f0.5": { url: `${DATA}/func/BOLD_mcf_brain_f0.5_mask.nii.gz`, label: "BOLD_mcf_brain_mask.nii.gz (f=0.5, designated)", dims: "70×64×37", kind: "mask", overlayBase: "mcf_4d_default", previewUrl: `${DATA}/previews/bet_func_f0.5.png` },
 
   func2struct_mat: { url: `${DATA}/func/func2struct.mat`, label: "functional2struct.mat", kind: "mat", previewUrl: `${DATA}/previews/align_func2struct.png`, previewCaption: "Functional brain (hot colormap) resampled into T1w space using this matrix, overlaid on the post-BET T1w." },
   struct2standard_mat: { url: `${DATA}/anat/struct2standard.mat`, label: "struct2standard.mat", kind: "mat" },
@@ -98,25 +100,25 @@ const COMPARISON_PROMPTS = {
 const STEP_RUNTIME = {
   dcm2niix_t1w: {
     commands: [{ binary: "dcm2niix", validator: "dcm2niix_t1w" }],
-    task: "Convert the T1w DICOM series (192 files) into a NIfTI image + JSON sidecar.",
+    task: "Convert the T1w DICOM series (192 files) into a NIfTI image + JSON sidecar. This exercise requires -z y and -b y explicitly, every run — without both, nothing is revealed.",
     dicomFolderName: "T1w_dicom",
     outputRole: "t1w-nifti",
     series: T1W_SERIES,
     hints: [
-      "dcm2niix takes the DICOM folder as its last (positional) argument. Run 'ls' to see it.",
-      "Add -z y to gzip-compress the output, and -b y to also write the JSON sidecar.",
+      "Input folder: T1w_dicom/ (run 'ls' to see it). This exercise's requirement: -z y (gzip-compress) and -b y (write the JSON sidecar), both, every time — not optional here. (On a real terminal, dcm2niix's own upstream defaults already enable the JSON sidecar and disable gzip; this exercise asks you to set both explicitly regardless.)",
+      "dcm2niix takes the DICOM folder as its last (positional) argument, -o <dir> for where to write output, -f <name> for the output filename stem.",
       "Try: dcm2niix -z y -b y -f T1w -o . T1w_dicom",
     ],
   },
   dcm2niix_bold: {
     commands: [{ binary: "dcm2niix", validator: "dcm2niix_bold" }],
-    task: "Convert the BOLD DICOM series (240 files) into a 4D NIfTI image + JSON sidecar.",
+    task: "Convert the BOLD DICOM series (240 files) into a 4D NIfTI image + JSON sidecar. This exercise requires -z y and -b y explicitly, every run — without both, nothing is revealed.",
     dicomFolderName: "BOLD_dicom",
     outputRole: "bold-nifti",
     series: BOLD_SERIES,
     hints: [
-      "Same shape as the T1w conversion, different folder.",
-      "Add -z y -b y as before.",
+      "Input folder: BOLD_dicom/ (run 'ls' to see it). Same requirement as the T1w conversion: -z y and -b y, both, every time.",
+      "Same shape as the T1w conversion, different folder and -f name.",
       "Try: dcm2niix -z y -b y -f BOLD -o . BOLD_dicom",
     ],
   },
@@ -128,8 +130,8 @@ const STEP_RUNTIME = {
     comparisonOutputRole: "bold-mcf-refvol0",
     hints: [
       "Syntax: mcflirt -in <file> -out <file> -plots [-refvol <n>]",
-      "First run with no -refvol at all (the Default reference: the middle volume). Then run again with -refvol 0 and a different -out name, to align to the First volume instead.",
-      "Try: mcflirt -in BOLD.nii.gz -out BOLD_mcf.nii.gz -plots\nmcflirt -in BOLD.nii.gz -out BOLD_mcf_refvol0.nii.gz -refvol 0 -plots",
+      "First run with no -refvol at all (the Default reference: the middle volume). Then run again with -refvol 0 and a DIFFERENT -out name, to align to the First volume instead — reusing the same name would overwrite the first run.",
+      "Try: mcflirt -in BOLD.nii.gz -out BOLD_mcf.nii.gz -plots\nmcflirt -in BOLD.nii.gz -out BOLD_mcf_firstvol.nii.gz -refvol 0 -plots",
     ],
   },
   bet_t1w: {
@@ -141,6 +143,7 @@ const STEP_RUNTIME = {
     defaultParam: { f: "0.5" },
     designatedParam: "0.5",
     assetPrefix: "bet",
+    suggestedBaseName: "T1w_brain",
     outputRole: "t1w-brain",
     outputRoleLabel: "post-BET T1w",
     variantRole: "t1w-brain-variant",
@@ -148,44 +151,31 @@ const STEP_RUNTIME = {
     maskVariantRole: "t1w-brain-mask-variant",
     hints: [
       "Syntax: bet <input> <output> [-f <value>] [-m]. Leave -f out entirely to get the homework's default (0.5).",
-      "Add -m to also get the binary mask.",
+      "Add -m to also get the binary mask. To compare another threshold, use a different output name, e.g. T1w_brain_f0.2.nii.gz -f 0.2 — reusing the same name for a different -f would overwrite that variant.",
       "Try: bet T1w.nii.gz T1w_brain.nii.gz -m    (no -f — uses the 0.5 default)",
     ],
   },
   bet_func: {
-    commands: [
-      { binary: "fslroi", validator: "fslroi_vol0" },
-      { binary: "bet", validator: "bet" },
-      { binary: "fslmaths", validator: "fslmaths_mas", match: (t) => t.includes("-mas") },
-    ],
-    task: "Three commands: extract a representative volume, BET it, then apply that mask back to all 240 volumes.",
-    // fslroi sub-step
-    fslroiInputRole: "bold-mcf-default",
-    fslroiInputComparisonRole: "bold-mcf-refvol0",
-    fslroiOutputRole: "bold-mcf-vol0",
-    // bet sub-step
-    expectedInputRole: "bold-mcf-vol0",
-    inputLabel: "representative volume (from fslroi)",
+    commands: [{ binary: "bet", validator: "bet" }],
+    task: "Brain-extract the motion-corrected 4D BOLD series in ONE command, using bet's fMRI mode (-F), which genuinely processes all 240 volumes and dilates the mask slightly. Homework default is -f 0.5; -F's own real default (if -f is omitted) is 0.3 — both are precomputed for comparison.",
+    expectedInputRole: "bold-mcf-default",
+    inputLabel: "motion-corrected 4D BOLD (Default reference run)",
+    inputComparisonRole: "bold-mcf-refvol0",
+    fmriMode: true,
     supportedParams: { f: ["0.3", "0.5"] },
     defaultParam: { f: "0.5" },
     designatedParam: "0.5",
     assetPrefix: "funcbet",
-    outputRole: "bold-brain-vol0",
-    outputRoleLabel: "post-BET representative volume",
-    variantRole: "bold-brain-vol0-variant",
+    suggestedBaseName: "BOLD_mcf_brain",
+    outputRole: "bold-brain-4d",
+    outputRoleLabel: "brain-extracted 4D BOLD",
+    variantRole: "bold-brain-4d-variant",
     maskRole: "bold-brain-mask",
     maskVariantRole: "bold-brain-mask-variant",
-    // fslmaths -mas sub-step (distinct field names — this step shares one
-    // config object across three sub-commands with different input roles)
-    masInputRole: "bold-mcf-default",
-    masInputComparisonRole: "bold-mcf-refvol0",
-    masMaskRole: "bold-brain-mask",
-    masMaskComparisonRole: "bold-brain-mask-variant",
-    masOutputRole: "bold-brain-4d",
     hints: [
-      "Step 1: fslroi BOLD_mcf.nii.gz BOLD_mcf_vol0.nii.gz 0 1   (first volume only)",
-      "Step 2: bet BOLD_mcf_vol0.nii.gz BOLD_mcf_vol0_brain.nii.gz -m   (default -f 0.5)",
-      "Step 3: fslmaths BOLD_mcf.nii.gz -mas BOLD_mcf_vol0_brain_mask.nii.gz BOLD_mcf_brain.nii.gz",
+      "Input: the Default reference run's motion-corrected 4D BOLD (240 volumes, from the previous step). This exercise's recommended command uses bet's fMRI mode, -F — confirmed on the installed FSL, it applies BET to every volume of a 4D series directly (and dilates the mask slightly), instead of the plain form, which only really works on a single 3D volume.",
+      "This exercise's designated threshold is -f 0.5 (the homework's default) together with -F; add -m for the mask. -F's own real default, if you omit -f, is -f 0.3 — precomputed here too, as a labeled comparison.",
+      "Try: bet BOLD_mcf.nii.gz BOLD_mcf_brain.nii.gz -F -f 0.5 -m\n(The homework's own plain syntax — bet BOLD_mcf.nii.gz BOLD_mcf_brain.nii.gz -f 0.5 -m, without -F — is accepted here too, as a shortcut matching its literal text; on the installed FSL, -F is what actually avoids silently truncating a 4D input to one volume.)",
     ],
   },
   flirt_func2struct: {
@@ -193,6 +183,7 @@ const STEP_RUNTIME = {
     task: "Rigidly register the post-BET 4D fMRI to the post-BET T1w.",
     expectedInputRole: "bold-brain-4d",
     inputLabel: "post-BET 4D fMRI",
+    inputComparisonRole: "bold-brain-4d-variant",
     expectedRefRole: "t1w-brain",
     refLabel: "post-BET T1w",
     refComparisonRole: "t1w-brain-variant",
@@ -238,6 +229,7 @@ const STEP_RUNTIME = {
     task: "Combine both registrations and resample the full 240-volume post-BET fMRI into MNI space.",
     expectedInputRole: "bold-brain-4d",
     inputLabel: "post-BET 4D fMRI",
+    inputComparisonRole: "bold-brain-4d-variant",
     expectedRefRole: "mni-brain",
     expectedPremat: "func2struct-mat",
     expectedWarp: "struct2standard-warp",
@@ -260,29 +252,6 @@ const STEP_RUNTIME = {
       "Try: fslmaths BOLD_mni.nii.gz -kernel gauss 2.1233 -fmean BOLD_mni_smooth5mm.nii.gz -odt short",
     ],
   },
-};
-
-// Extra validator for the fslroi sub-step of bet_func (kept here, not in
-// filesystem.js, since it only needs step-config + ASSET_MAP, both local to
-// this file's module scope in load order... actually VALIDATORS lives in
-// filesystem.js, so this entry is merged onto it below).
-VALIDATORS.fslroi_vol0 = function (tokens, vfs, step) {
-  const raw = tokens.slice(1);
-  const inTok = raw[0];
-  const check = requireInput(vfs, inTok, step.fslroiInputRole, "-in 4D BOLD (motion-corrected)", step.fslroiInputComparisonRole);
-  if (!check.ok) return check;
-  const outTok = raw[1];
-  if (!outTok) return { ok: false, message: "fslroi needs an output name: fslroi <in> <out> <tmin> <tsize>" };
-  const tmin = raw[2];
-  const tsize = raw[3];
-  if (tmin !== "0" || tsize !== "1") {
-    return { ok: false, message: "This step extracts exactly one representative volume: fslroi <in> <out> 0 1 (start at volume 0, take 1 volume)." };
-  }
-  return {
-    ok: true,
-    reveal: [{ id: "bold_mcf_vol0", name: ensureExt(outTok, ".nii.gz"), role: step.fslroiOutputRole, roleLabel: "representative BOLD volume" }],
-    message: "Extracted volume 0 (the first volume) of the 4D series.",
-  };
 };
 
 // ---- files present from the start ------------------------------------

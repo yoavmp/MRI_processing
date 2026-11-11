@@ -238,9 +238,16 @@ class Terminal {
         role: typeof entry === "object" ? entry.role : undefined,
         roleLabel: typeof entry === "object" ? entry.roleLabel : undefined,
         comparisonNote: typeof entry === "object" ? entry.comparisonNote : undefined,
+        paramVariant: typeof entry === "object" ? entry.paramVariant : undefined,
       });
       revealedIds.push(assetId);
-      this.printHTML(`✓ revealed: <span class="term-file">${fileName}</span> ${asset.dims ? `<span class="term-dim">(${asset.dims})</span>` : ""}`, "term-reveal");
+      const tag = typeof entry === "object" ? entry.tag : undefined;
+      this.printHTML(
+        `✓ revealed: <span class="term-file">${fileName}</span>` +
+          (tag ? ` <span class="term-tag">(${escapeHtml(tag)})</span>` : "") +
+          (asset.dims ? ` <span class="term-dim">(${asset.dims})</span>` : ""),
+        "term-reveal"
+      );
       if (this.onReveal) this.onReveal(assetId, asset);
     }
     if (revealedIds.length && this.onCommandSuccess) {

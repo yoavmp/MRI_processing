@@ -34,12 +34,10 @@ cp "${FUNC}/BOLD_mcf_default.nii.gz"          "${OUT}/func/BOLD_mcf_default.nii.
 cp "${FUNC}/BOLD_mcf_default.nii.gz.par"      "${OUT}/func/BOLD_mcf_default.par"
 cp "${FUNC}/BOLD_mcf_refvol0.nii.gz"          "${OUT}/func/BOLD_mcf_refvol0.nii.gz"
 cp "${FUNC}/BOLD_mcf_refvol0.nii.gz.par"      "${OUT}/func/BOLD_mcf_refvol0.par"
-cp "${FUNC}/BOLD_mcf_vol0.nii.gz"             "${OUT}/func/BOLD_mcf_vol0.nii.gz"
-cp "${FUNC}/BOLD_mcf_vol0_brain_f0.3.nii.gz"       "${OUT}/func/BOLD_mcf_vol0_brain_f0.3.nii.gz"
-cp "${FUNC}/BOLD_mcf_vol0_brain_f0.3_mask.nii.gz"  "${OUT}/func/BOLD_mcf_vol0_brain_f0.3_mask.nii.gz"
-cp "${FUNC}/BOLD_mcf_vol0_brain_f0.5.nii.gz"       "${OUT}/func/BOLD_mcf_vol0_brain_f0.5.nii.gz"
-cp "${FUNC}/BOLD_mcf_vol0_brain_f0.5_mask.nii.gz"  "${OUT}/func/BOLD_mcf_vol0_brain_f0.5_mask.nii.gz"
-cp "${FUNC}/BOLD_mcf_brain4d_f0.5.nii.gz"     "${OUT}/func/BOLD_mcf_brain4d_f0.5.nii.gz"
+for f in 0.3 0.5; do
+  cp "${FUNC}/BOLD_mcf_brain_f${f}.nii.gz"      "${OUT}/func/BOLD_mcf_brain_f${f}.nii.gz"
+  cp "${FUNC}/BOLD_mcf_brain_f${f}_mask.nii.gz" "${OUT}/func/BOLD_mcf_brain_f${f}_mask.nii.gz"
+done
 cp "${FUNC}/func2struct.mat"                  "${OUT}/func/func2struct.mat"
 cp "${FUNC}/BOLD_mni.nii.gz"                  "${OUT}/func/BOLD_mni.nii.gz"
 cp "${FUNC}/BOLD_mni_smooth5mm.nii.gz"        "${OUT}/func/BOLD_mni_smooth5mm.nii.gz"

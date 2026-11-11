@@ -112,17 +112,21 @@ class VFS {
     const entries = [];
     const seenDirs = new Set();
     for (const [p, meta] of this.files) {
-      if (p === dir && meta.kind === "dir") continue;
+      if (p === dir) continue;
       if (!p.startsWith(dir + "/")) continue;
       const rest = p.slice(dir.length + 1);
-      if (rest.includes("/")) {
-        const sub = rest.split("/")[0];
+      const sub = rest.split("/")[0];
+      // Any path under this dir whose first segment isn't the whole rest is
+      // itself a subdirectory — same as a dir's own marker entry (meta.kind
+      // === "dir") when rest has no further "/". Either way it's one
+      // directory entry, shown once, with a trailing slash.
+      if (rest.includes("/") || meta.kind === "dir") {
         if (!seenDirs.has(sub)) {
           seenDirs.add(sub);
           entries.push({ name: sub + "/", kind: "dir" });
         }
       } else {
-        entries.push({ name: rest, kind: meta.kind === "dir" ? "dir" : "file", meta });
+        entries.push({ name: rest, kind: "file", meta });
       }
     }
     return entries.sort((a, b) => a.name.localeCompare(b.name));
@@ -223,9 +227,14 @@ const VALIDATORS = {
     const check = requireInput(vfs, inTok, step.expectedInputRole, step.inputLabel, step.inputComparisonRole);
     if (!check.ok) return check;
     if (!outTok) return { ok: false, message: "bet needs an output name too: bet <input> <output> [-f <value>] [-m]" };
+    const usesF = !!flags.F;
+    // -F (fMRI mode) itself defaults to -f 0.3 on the real, installed bet —
+    // different from this exercise's homework default (0.5) — so which
+    // threshold "omitting -f" means depends on whether -F was given.
+    const impliedDefault = step.fmriMode && usesF ? "0.3" : step.defaultParam.f;
     const fVal = flags.f === true ? null : flags.f;
     const supported = step.supportedParams.f;
-    const chosen = fVal ?? step.defaultParam.f;
+    const chosen = fVal ?? impliedDefault;
     if (!supported.includes(String(chosen))) {
       return {
         ok: false,
@@ -237,19 +246,50 @@ const VALIDATORS = {
     const isDesignated = String(chosen) === String(step.designatedParam ?? step.defaultParam.f);
     const brainRole = isDesignated ? step.outputRole : step.variantRole;
     const maskRole = isDesignated ? step.maskRole : step.maskVariantRole;
+
+    // Collision guard: this exact output name already holds a DIFFERENT
+    // threshold's result — reusing it would silently overwrite that variant.
+    const suggest = (suffix) => `${step.suggestedBaseName || "output"}_f${chosen}${suffix}`;
+    const brainPath = vfs.cwd + "/" + outName;
+    const existingBrain = vfs.files.get(brainPath);
+    if (existingBrain && [step.outputRole, step.variantRole].includes(existingBrain.role) && String(existingBrain.paramVariant) !== String(chosen)) {
+      return {
+        ok: false,
+        message: `"${outName}" is already this step's -f ${existingBrain.paramVariant} result. Reusing that name for -f ${chosen} would overwrite it — pick a distinct name, e.g. ${suggest(".nii.gz")}.`,
+      };
+    }
+    let maskName;
+    if (wantMask) {
+      maskName = ensureExt(stem(outName) + "_mask", ".nii.gz");
+      const maskPath = vfs.cwd + "/" + maskName;
+      const existingMask = vfs.files.get(maskPath);
+      if (existingMask && [step.maskRole, step.maskVariantRole].includes(existingMask.role) && String(existingMask.paramVariant) !== String(chosen)) {
+        return {
+          ok: false,
+          message: `"${maskName}" is already this step's -f ${existingMask.paramVariant} mask. Reusing that name for -f ${chosen} would overwrite it — pick a distinct name, e.g. ${suggest("_mask.nii.gz")}.`,
+        };
+      }
+    }
+
     const variantSuffix = isDesignated ? "" : ` (comparison-only, -f ${chosen})`;
     const reveal = [
-      { id: `${step.assetPrefix}_brain_f${chosen}`, name: outName, role: brainRole, roleLabel: step.outputRoleLabel + variantSuffix },
+      { id: `${step.assetPrefix}_brain_f${chosen}`, name: outName, role: brainRole, roleLabel: step.outputRoleLabel + variantSuffix, paramVariant: chosen },
     ];
     if (wantMask) {
       reveal.push({
         id: `${step.assetPrefix}_mask_f${chosen}`,
-        name: ensureExt(stem(outName) + "_mask", ".nii.gz"),
+        name: maskName,
         role: maskRole,
         roleLabel: step.outputRoleLabel + " mask" + variantSuffix,
+        paramVariant: chosen,
       });
     }
     let message = `fractional intensity threshold: ${chosen}`;
+    if (step.fmriMode) {
+      message += usesF
+        ? "\n-F: fMRI mode — bet applies directly to every volume of the 4D series (and dilates the mask slightly), confirmed against the installed FSL."
+        : "\nNote: this exercise accepts bet's plain syntax (no -F) here too, as a shortcut matching the homework's own literal command text. On the installed FSL, -F is what actually makes bet process a whole 4D series instead of silently truncating to its first volume — see 'help bet'.";
+    }
     if (!wantMask) message += "\n(no -m given — only the brain image was produced, no mask. Add -m to also get the binary mask.)";
     if (!isDesignated) {
       message += `\nNote: -f ${chosen} is a comparison-only variant here — the rest of this exercise continues from -f ${step.defaultParam.f} (the homework's default). Both are real, independently computed results.`;
@@ -275,13 +315,27 @@ const VALIDATORS = {
     const outName = ensureExt(outTok, ".nii.gz");
     const variant = usesRefvol0 ? "refvol0" : "default";
     const role = usesRefvol0 ? step.comparisonOutputRole : step.outputRole;
+    const otherRole = usesRefvol0 ? step.outputRole : step.comparisonOutputRole;
     const parId = usesRefvol0 ? "mcf_par_refvol0" : "mcf_par_default";
     const runLabel = variant === "default" ? "Default reference" : "First volume";
+    const otherLabel = usesRefvol0 ? "Default reference" : "First volume";
     const ndesc = variant === "default" ? "the middle volume" : "the first acquired volume";
-    const reveal = [{ id: usesRefvol0 ? "mcf_4d_refvol0" : "mcf_4d_default", name: outName, role, roleLabel: "motion-corrected BOLD" }];
+
+    // Collision guard: this exact output name already holds the OTHER run's result.
+    const outPath = vfs.cwd + "/" + outName;
+    const existingOut = vfs.files.get(outPath);
+    if (existingOut && existingOut.role === otherRole) {
+      const suggestion = usesRefvol0 ? "BOLD_mcf_firstvol.nii.gz" : "BOLD_mcf.nii.gz";
+      return {
+        ok: false,
+        message: `"${outName}" is already the "${otherLabel}" run's output. Reusing that name for the "${runLabel}" run would overwrite it — pick a distinct name, e.g. ${suggestion}.`,
+      };
+    }
+
+    const reveal = [{ id: usesRefvol0 ? "mcf_4d_refvol0" : "mcf_4d_default", name: outName, role, roleLabel: "motion-corrected BOLD", tag: runLabel }];
     const notes = [];
     if (flags.plots) {
-      reveal.push({ id: parId, name: ensureExt(stem(outName), ".par"), role: role + "-par", roleLabel: "motion parameters" });
+      reveal.push({ id: parId, name: ensureExt(stem(outName), ".par"), role: role + "-par", roleLabel: "motion parameters", tag: runLabel });
     } else {
       notes.push("tip: add -plots to save the .par motion-parameter file.");
     }
@@ -294,28 +348,6 @@ const VALIDATORS = {
       ok: true,
       reveal,
       message: "McFLIRT v2.0\nRegistering 240 volumes to " + ndesc + "...\ndone.\n" + notes.join("\n"),
-    };
-  },
-
-  fslmaths_mas(tokens, vfs, step) {
-    // fslmaths <mcf_4d> -mas <mask> <out>   -- explicit "apply mask back to the 4D series"
-    const raw = tokens.slice(1);
-    const inTok = raw[0];
-    const inCheck = requireInput(vfs, inTok, step.masInputRole, "4D motion-corrected BOLD", step.masInputComparisonRole);
-    if (!inCheck.ok) return inCheck;
-    const masIdx = raw.indexOf("-mas");
-    if (masIdx === -1 || !raw[masIdx + 1]) {
-      return { ok: false, message: "Expected: ... -mas <mask> <output> — -mas multiplies by a (binarized) mask image." };
-    }
-    const maskTok = raw[masIdx + 1];
-    const maskCheck = requireInput(vfs, maskTok, step.masMaskRole, "brain mask", step.masMaskComparisonRole);
-    if (!maskCheck.ok) return maskCheck;
-    const outTok = raw[masIdx + 2];
-    if (!outTok || outTok.startsWith("-")) return { ok: false, message: "Missing output filename after the mask." };
-    return {
-      ok: true,
-      reveal: [{ id: "bold_brain_4d", name: ensureExt(outTok, ".nii.gz"), role: step.masOutputRole, roleLabel: "brain-extracted 4D BOLD" }],
-      message: "Mask applied to all 240 volumes — this is the real, brain-extracted 4D series (not a single 3D volume).",
     };
   },
 
@@ -428,11 +460,22 @@ function runDcm2niix(tokens, vfs, step, cfg) {
   const folderFile = vfs.findByName(folderName) || [...vfs.files.values()].find((f) => f.kind === "dir" && basename(f.path) === folderName);
   const folderOk = folderFile && folderFile.role === cfg.dicomRole;
   if (!folderOk) {
-    return { ok: false, message: `"${folderArg}" isn't the ${cfg.dicomLabel} for this step. Run 'ls' — you're looking for '${step.dicomFolderName}'.` };
+    return { ok: false, message: `"${folderArg}" isn't the ${cfg.dicomLabel} for this step. Run 'ls' — you're looking for '${step.dicomFolderName}/'.` };
   }
-  const tips = [];
-  if (flags.z === undefined) tips.push("tip: -z y gzip-compresses the output (.nii.gz instead of .nii)");
-  if (flags.b === undefined) tips.push("tip: -b y also writes the .json metadata sidecar — without it you'd only get the image");
+  // This exercise requires both flags explicitly, every run, regardless of
+  // dcm2niix's own upstream defaults (which already enable -b and disable
+  // -z) — see the Task panel / hints for why.
+  const missing = [];
+  if (String(flags.z) !== "y") missing.push("-z y");
+  if (String(flags.b) !== "y") missing.push("-b y");
+  if (missing.length) {
+    return {
+      ok: false,
+      message:
+        `This exercise requires both -z y (gzip-compress) and -b y (write the JSON sidecar) on every dcm2niix run — missing: ${missing.join(", ")}. Nothing was created; add the missing flag(s) and try again.\n` +
+        `Try: dcm2niix -z y -b y -f ${cfg.defaultName} -o . ${step.dicomFolderName}`,
+    };
+  }
   const outName = flags.f && flags.f !== true ? flags.f : cfg.defaultName;
   const outDir = flags.o && flags.o !== true ? flags.o.replace(/\/+$/, "") || "." : ".";
   const niiFileName = ensureExt(outName, ".nii.gz");
@@ -446,8 +489,7 @@ function runDcm2niix(tokens, vfs, step, cfg) {
     message:
       `Found ${s.fileCount} DICOM file(s) in ${step.dicomFolderName}/\n` +
       `Convert as ${outDir}/${niiFileName} (${s.dims})\n` +
-      `Conversion required ${s.convertSeconds}s.` +
-      (tips.length ? "\n" + tips.join("\n") : ""),
+      `Conversion required ${s.convertSeconds}s.`,
   };
 }
 

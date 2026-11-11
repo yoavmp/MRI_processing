@@ -59,16 +59,24 @@ cd "${FUNC}"
 mcflirt -in BOLD.nii.gz -out BOLD_mcf_default.nii.gz -plots
 mcflirt -in BOLD.nii.gz -out BOLD_mcf_refvol0.nii.gz -refvol 0 -plots
 
-# ---------- Stage 3 (functional): representative volume -> BET -> mask the full 4D ----------
-fslroi BOLD_mcf_default.nii.gz BOLD_mcf_vol0.nii.gz 0 1
-bet BOLD_mcf_vol0.nii.gz BOLD_mcf_vol0_brain_f0.5.nii.gz -f 0.5 -m -R   # designated
-bet BOLD_mcf_vol0.nii.gz BOLD_mcf_vol0_brain_f0.3.nii.gz -f 0.3 -m -R   # comparison only
-fslmaths BOLD_mcf_default.nii.gz -mas BOLD_mcf_vol0_brain_f0.5_mask.nii.gz BOLD_mcf_brain4d_f0.5.nii.gz -odt short
+# ---------- Stage 3 (functional): one BET command, fMRI mode (-F), directly
+# on the full 4D motion-corrected series. -F is bet's own documented mode for
+# 4D fMRI data (confirmed on the installed bet's --help: "apply to 4D FMRI
+# data (uses -f 0.3 and dilates brain mask slightly)") — it genuinely brain-
+# extracts every volume and produces a real 4D result plus one 3D mask, no
+# fslroi/fslmaths workaround needed. -F and -R are mutually exclusive, so -R
+# is dropped here (it's still used for the T1w BET above).
+bet BOLD_mcf_default.nii.gz BOLD_mcf_brain_f0.5.nii.gz -F -f 0.5 -m   # designated
+bet BOLD_mcf_default.nii.gz BOLD_mcf_brain_f0.3.nii.gz -F -f 0.3 -m   # comparison only (-F's own default f)
 
 # ---------- Stage 4 (join): func->struct FLIRT, then applywarp on the full 4D ----------
-flirt -in BOLD_mcf_vol0_brain_f0.5.nii.gz -ref "${ANAT}/T1w_brain_f0.5.nii.gz" -omat func2struct.mat -dof 6
-applywarp -i BOLD_mcf_brain4d_f0.5.nii.gz -r "${MNI_brain}" -o BOLD_mni.nii.gz \
-    --premat=func2struct.mat --warp="${ANAT}/struct2standard_warp.nii.gz"
+# -in is the real masked 4D series from Stage 3 (FLIRT truncates a 4D -in to
+# its first volume internally, same verified behavior as the T1w/BET case;
+# since Stage 2 already brought every volume into one common frame, that
+# first-volume alignment is representative of the whole series).
+flirt -in BOLD_mcf_brain_f0.5.nii.gz -ref "${ANAT}/T1w_brain_f0.5.nii.gz" -omat func2struct.mat -dof 6
+applywarp -i BOLD_mcf_brain_f0.5.nii.gz -r "${MNI_brain}" -o BOLD_mni.nii.gz \
+    --premat=func2struct.mat --warp="${ANAT}/struct2standard_warp.nii.gz" -d short
 
 # ---------- Stage 5: smoothing, 5mm FWHM (sigma 2.1233) ----------
 fslmaths BOLD_mni.nii.gz -kernel gauss 2.1233 -fmean BOLD_mni_smooth5mm.nii.gz -odt short

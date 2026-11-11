@@ -101,9 +101,9 @@
       ],
     },
     bet_func: {
-      baseAssetId: "bold_mcf_vol0",
+      baseAssetId: "mcf_4d_default",
       variants: [
-        ["funcbet_mask_f0.3", "-f 0.3"],
+        ["funcbet_mask_f0.3", "-f 0.3 (-F's own default)"],
         ["funcbet_mask_f0.5", "-f 0.5 (designated)"],
       ],
     },
@@ -268,16 +268,13 @@
   }
 
   // ---- Terminal step status panel: actual input filenames present this
-  // session, missing prerequisites, expected outputs, and (for the
-  // multi-command / multi-run steps) sub-task progress.
+  // session, missing prerequisites, expected outputs, and (for mcflirt's
+  // two-run step) per-run progress.
   function isStepComplete(stepId) {
     const step = STEP_RUNTIME[stepId];
     if (!step) return false;
     const vfsFiles = [...term.vfs.files.values()];
     const hasRole = (role) => !!role && vfsFiles.some((f) => f.role === role);
-    if (stepId === "bet_func") {
-      return hasRole("bold-mcf-vol0") && hasRole(step.outputRole) && hasRole(step.masOutputRole);
-    }
     return hasRole(step.outputRole);
   }
 
@@ -302,24 +299,7 @@
 
     let html = "";
 
-    if (stepId === "bet_func") {
-      const f1 = filesWithRole("bold-mcf-vol0");
-      const f2 = filesWithRole(step.outputRole);
-      const f3 = filesWithRole(step.masOutputRole);
-      const subtasks = [
-        [f1.length > 0, "fslroi — extract a representative volume", f1],
-        [f2.length > 0, "bet — brain-extract it", f2],
-        [f3.length > 0, "fslmaths -mas — apply the mask to the full 4D series", f3],
-      ];
-      const nextIdx = subtasks.findIndex(([done]) => !done);
-      html += `<div class="term-status-section"><strong>Sub-steps:</strong><ul class="term-status-list">` +
-        subtasks.map(([ok, label, files]) => statusLine(ok, label, files)).join("") +
-        `</ul>` +
-        (nextIdx === -1
-          ? `<p class="term-status-next">All three sub-steps are done for this run.</p>`
-          : `<p class="term-status-next">Next: ${escapeHtml(subtasks[nextIdx][1])}.</p>`) +
-        `</div>`;
-    } else if (stepId === "mcflirt") {
+    if (stepId === "mcflirt") {
       const defFiles = filesWithRole(step.outputRole);
       const cmpFiles = filesWithRole(step.comparisonOutputRole);
       html += `<div class="term-status-section"><strong>Runs:</strong><ul class="term-status-list">` +
